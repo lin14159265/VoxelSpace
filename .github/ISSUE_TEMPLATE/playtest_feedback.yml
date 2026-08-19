@@ -1,0 +1,67 @@
+name: Playtest feedback
+description: 提交一次真实试玩后的体验反馈
+title: "[Playtest] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这类反馈比“再加一个功能”更有价值。请优先描述你实际遇到的卡点、退出点和有趣瞬间。
+
+  - type: input
+    id: duration
+    attributes:
+      label: 试玩时长
+      placeholder: 例如 35 分钟
+    validations:
+      required: true
+
+  - type: input
+    id: progress
+    attributes:
+      label: 玩到了哪里
+      description: 例如刚修好飞船、第一次登月、到达空间站、完成跨星系等。
+      placeholder: 我玩到……
+    validations:
+      required: true
+
+  - type: textarea
+    id: confusion
+    attributes:
+      label: 最不清楚 / 最容易卡住的地方
+      description: 哪一步让你不知道该做什么，或者必须试很多次才理解？
+    validations:
+      required: true
+
+  - type: textarea
+    id: friction
+    attributes:
+      label: 最影响体验的操作或流程
+      description: 可以是手感、节奏、UI、重复劳动、性能、战斗、飞行等。
+    validations:
+      required: true
+
+  - type: textarea
+    id: highlight
+    attributes:
+      label: 最有意思的瞬间
+      description: 哪个瞬间让你愿意继续玩？如果没有，也可以直接写“没有”。
+    validations:
+      required: true
+
+  - type: textarea
+    id: stop
+    attributes:
+      label: 如果你中途退出，为什么？
+      description: 这是非常重要的反馈；没有中途退出可以写“完整玩到当前进度”。
+
+  - type: input
+    id: environment
+    attributes:
+      label: 浏览器与设备（可选）
+      placeholder: Chrome / Windows / GPU
+
+  - type: textarea
+    id: other
+    attributes:
+      label: 其他建议
+      description: 可写你最希望保留、删掉或优先改进的内容。

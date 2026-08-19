@@ -1,0 +1,58 @@
+name: Bug report
+description: 报告会影响正常游玩的错误或异常
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量填写可复现信息；如果问题与存档有关，可以附上游戏内导出的存档文本。
+
+  - type: input
+    id: version
+    attributes:
+      label: 游戏版本
+      description: 例如 v0.1.0；如果是在线版也可以填写试玩日期。
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 浏览器与设备
+      description: 例如 Chrome 151 / Windows 11 / RTX 4060。
+      placeholder: Chrome / Windows / GPU
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从什么状态开始，依次做了什么，最后发生了什么？
+      placeholder: |
+        1. 新建生存存档
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 可附截图、控制台错误、存档文本、seed，或说明是否能够稳定复现。
