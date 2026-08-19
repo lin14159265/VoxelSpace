@@ -1,0 +1,18 @@
+{
+  "name": "voxel-nms",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minecraft x No Man's Sky voxel sandbox space survival demo",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/run.js",
+    "test:v2": "node tests/run-v2.js"
+  },
+  "dependencies": {
+    "three": "^0.166.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}

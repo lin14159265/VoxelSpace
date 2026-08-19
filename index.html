@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VOXELSPACE · 体素星际 — Minecraft × 无人深空</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23050b14'/><rect x='2' y='2' width='12' height='12' fill='%237ff0ff' opacity='0.9'/><rect x='5' y='5' width='6' height='6' fill='%23050b14'/></svg>" />
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <!-- 全屏氛围叠加层 -->
+  <div id="fx">
+    <div id="vignette"></div>
+    <div id="scanlines"></div>
+  </div>
+
+  <!-- 天气滤镜（沙暴/暴雪） -->
+  <div id="weather-overlay"></div>
+
+  <!-- 大气再入热障滤镜（等离子体灼热） -->
+  <div id="reentry-overlay"></div>
+
+  <!-- 加载画面 -->
+  <div id="loading" class="screen">
+    <div class="panel loading-panel">
+      <div class="loading-title">VOXEL<span>SPACE</span></div>
+      <div class="loading-sub">体素星际 · 太阳系 · 坠毁与重生</div>
+      <div class="loading-bar"><div id="loading-fill"></div></div>
+      <div id="loading-text">初始化世界引擎…</div>
+    </div>
+  </div>
+
+  <!-- 主菜单 -->
+  <div id="menu" class="screen hidden">
+    <div class="panel menu-panel">
+      <div class="menu-title">VOXEL<span>SPACE</span></div>
+      <div class="menu-sub">// 太阳系 · 地球 · 你的飞船坠毁于此 //</div>
+      <div class="menu-story">
+        扫描仪检测到生命信号微弱。飞船的动力系统已经瘫痪——<br/>
+        收集资源、修复飞船、离开地球，飞向金星、火星与更远的行星。
+      </div>
+      <div class="menu-controls">
+        <div class="mc-row"><span class="key">W A S D</span>移动 · <span class="key">空格</span>跳跃（驾驶中上升）</div>
+        <div class="mc-row"><span class="key">Shift</span>潜行 · <span class="key">Ctrl</span>疾跑</div>
+        <div class="mc-row"><span class="key">鼠标左键</span>激光挖掘 / 攻击</div>
+        <div class="mc-row"><span class="key">鼠标右键</span>放置方块</div>
+        <div class="mc-row"><span class="key">1–9 / 滚轮</span>选择快捷栏 · <span class="key">中键</span>选取方块</div>
+        <div class="mc-row"><span class="key">E</span>互动/登船 · <span class="key">F</span>手电筒 · <span class="key">C</span>扫描(指引飞船)</div>
+        <div class="mc-row"><span class="key">Q</span>开火 · <span class="key">Tab</span>背包 · <span class="key">B</span>关闭面板</div>
+        <div class="mc-row"><span class="key">Esc</span>游戏菜单</div>
+      </div>
+      <div class="menu-seed">星球种子 SEED: <span id="menu-seed">—</span></div>
+      <div class="menu-btns">
+        <button id="btn-continue" class="btn primary hidden">▶ 继续游戏</button>
+        <button id="btn-start" class="btn primary">▶ 初始化并进入游戏</button>
+      </div>
+      <div class="menu-btns-row">
+        <button id="btn-new" class="btn ghost hidden">↻ 开始新游戏</button>
+        <button id="btn-load" class="btn ghost hidden">读取存档</button>
+        <button id="btn-export" class="btn ghost hidden">导出存档</button>
+        <button id="btn-import" class="btn ghost">导入存档</button>
+        <input type="file" id="save-file-input" accept=".json,application/json" class="hidden" />
+      </div>
+      <div class="menu-btns-row">
+        <button id="btn-settings-menu" class="btn ghost">设置</button>
+        <button id="btn-quit" class="btn ghost">退出游戏</button>
+      </div>
+      <div class="menu-tip">点击进入后将锁定鼠标 · 建议使用 Chrome / Edge</div>
+    </div>
+  </div>
+
+  <!-- 暂停（游戏内菜单） -->
+  <div id="paused" class="screen hidden">
+    <div class="panel pause-panel">
+      <div class="pause-title">// 已暂停 //</div>
+      <button id="btn-resume" class="btn primary">继续游戏</button>
+      <div class="pause-btns">
+        <button id="btn-save" class="btn ghost">保存游戏存档</button>
+        <button id="btn-milestones" class="btn ghost">里程碑</button>
+        <button id="btn-settings" class="btn ghost">设置</button>
+        <button id="btn-menu" class="btn ghost">退出到主菜单</button>
+      </div>
+      <div class="pause-hint">按 Esc 继续 · 存档每 60 秒自动保存</div>
+      <div class="pause-stats" id="pause-stats">—</div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <!-- 左上：任务 -->
+    <div id="missions" class="panel hud-panel">
+      <div class="panel-title">任务 // MISSIONS</div>
+      <div id="mission-list"></div>
+    </div>
+
+    <!-- 顶部中央：当前目标 -->
+    <div id="objective" class="hud-center">
+      <div id="objective-text">—</div>
+      <div id="objective-progress"></div>
+      <div id="active-mission" class="hidden">悬赏 —</div>
+    </div>
+
+    <!-- 右上：星球信息 -->
+    <div id="planetinfo" class="panel hud-panel">
+      <div id="planet-name">行星 IX-407 · 未知</div>
+      <div id="planet-time">当地时间 06:00</div>
+      <div id="planet-pos">坐标 —</div>
+      <div id="planet-region" class="hidden">星域 —</div>
+      <div id="mode-badge">生存模式</div>
+      <div id="env-badge" class="hidden">⚠ 环境</div>
+    </div>
+
+    <!-- 左下：状态条 -->
+    <div id="stats" class="hud-bottom-left">
+      <div class="stat-row">
+        <div class="stat-label">护盾</div>
+        <div class="bar"><div id="bar-shield" class="fill shield"></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label">生命</div>
+        <div class="bar"><div id="bar-health" class="fill health"></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label">生命维持</div>
+        <div class="bar"><div id="bar-life" class="fill life"></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label">危险防护</div>
+        <div class="bar"><div id="bar-hazard" class="fill hazard"></div></div>
+      </div>
+    </div>
+
+    <!-- 右下：提示 -->
+    <div id="hints" class="hud-bottom-right">
+      <div class="hint-line">[E] 互动 [C] 扫描 [Q] 开火 [F] 手电筒 [Shift] 潜行 [Ctrl] 疾跑 [Tab] 背包 [M] 星图(太空)</div>
+    </div>
+
+    <!-- 飞船方位罗盘 -->
+    <div id="ship-compass" class="hidden">
+      <div id="ship-compass-arrow">▲</div>
+      <div class="sc-meta"><span class="sc-label">飞船残骸</span><span id="ship-compass-dist">—</span></div>
+    </div>
+
+    <!-- 地表导航罗盘（步行航点：飞船/日志/异常点） -->
+    <div id="surface-compass" class="hidden">
+      <div id="surface-compass-arrow">◆</div>
+      <div class="sc-meta"><span id="surface-compass-label">地表目标</span><span id="surface-compass-dist">—</span></div>
+    </div>
+
+    <!-- 快捷栏 -->
+    <div id="hotbar-wrap">
+      <div id="hotbar"></div>
+    </div>
+
+    <!-- 准星 -->
+    <div id="crosshair">
+      <div class="ch-dot"></div>
+      <div class="ch-ring" id="mine-progress"></div>
+      <div class="ch-top"></div><div class="ch-bottom"></div>
+      <div class="ch-left"></div><div class="ch-right"></div>
+    </div>
+    <div id="hitmarker"><i class="hm tl"></i><i class="hm tr"></i><i class="hm bl"></i><i class="hm br"></i></div>
+    <div id="tool-mode" class="hidden">徒手开采</div>
+    <div id="tooltip"></div>
+
+    <!-- 飞行 HUD -->
+    <div id="cockpit-frame" class="hidden"></div>
+    <div id="flight-hud" class="hidden">
+      <div id="compass" class="hidden"><div id="compass-arrow">▲</div><div id="compass-label">目标</div><div id="compass-dist">—</div><div id="compass-eta">—</div></div>
+      <div class="fh-row">
+        <div class="fh-speed"><span id="fh-speed">0</span><span class="fh-unit">km/h</span></div>
+        <div class="fh-alt">高度 <span id="fh-alt">0</span> m</div>
+        <div class="fh-throttle"><div id="fh-throttle-fill"></div></div>
+      </div>
+      <div id="ship-vitals">
+        <div class="sv-row"><span>舰船护盾</span><div class="bar"><div id="bar-ship-shield" class="fill ship-shield"></div></div><span id="ship-shield-text">100</span></div>
+        <div class="sv-row"><span>船体</span><div class="bar"><div id="bar-ship-hull" class="fill ship-hull"></div></div><span id="ship-hull-text">100</span></div>
+      </div>
+      <div class="fh-hint">W 油门 · S 刹车 · 空格上升 · Shift/Ctrl 下降 · V 切换视角 · 鼠标转向 · E 降落离船</div>
+    </div>
+
+    <!-- 获得物品弹窗 -->
+    <div id="popups"></div>
+  </div>
+
+  <!-- 消息（置于 HUD 之外：主菜单/暂停界面也可见） -->
+  <div id="toasts"></div>
+
+  <!-- 准星模式提示（互动） -->
+  <div id="interact-hint" class="hidden">按住 <span class="key">E</span> 检查飞船残骸</div>
+
+  <!-- 背包 + 合成 -->
+  <div id="inventory-panel" class="fullpanel hidden">
+    <div class="inv-container panel">
+      <div class="inv-header">
+        <div class="inv-title">背包 // INVENTORY</div>
+        <div class="inv-hint">[B] 关闭 · [Tab] 也可 · 点击快捷栏格选中 <button id="btn-sort" class="craft-btn">整理背包</button></div>
+      </div>
+      <div class="inv-body">
+        <div class="inv-left">
+          <div class="inv-section-label">物品栏 36 格</div>
+          <div id="inv-grid"></div>
+        </div>
+        <div class="inv-right">
+          <div class="inv-section-label">合成 // CRAFTING</div>
+          <div id="craft-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 飞船维修 -->
+  <div id="repair-panel" class="fullpanel hidden">
+    <div class="repair-container panel">
+      <div class="repair-title">飞船维修 // STARSHIP REPAIR</div>
+      <div class="repair-sub" id="repair-sub">脉冲引擎与发射推进器受损 · 收集材料完成修复</div>
+      <div id="repair-list"></div>
+      <div class="repair-hint">[B] 关闭 · 修复完成后即可起飞</div>
+    </div>
+  </div>
+
+  <!-- 空间站 -->
+  <div id="station-panel" class="fullpanel hidden">
+    <div class="station-container panel">
+      <div class="repair-title">地球轨道空间站 // ORBITAL STATION</div>
+      <div class="repair-sub">信用点 <span id="station-credits">0</span> · 轨道贸易 · 收购订单 · 飞船船坞</div>
+      <div id="station-tabs">
+        <button class="craft-btn" data-tab="trade">交易中心</button>
+        <button class="craft-btn" data-tab="orders">任务中心</button>
+        <button class="craft-btn" data-tab="missions">任务板</button>
+        <button class="craft-btn" data-tab="shipyard">飞船船坞</button>
+        <button class="craft-btn" data-tab="crew">人员</button>
+      </div>
+      <div id="station-body"></div>
+      <div class="repair-hint">[B] 离站 · 出售资源换取信用点 · 船坞升级永久生效</div>
+    </div>
+  </div>
+
+  <!-- 数据日志 -->
+  <div id="log-panel" class="fullpanel hidden">
+    <div class="log-container panel">
+      <div class="repair-title">数据日志 // DATA LOG</div>
+      <div class="repair-sub">坠机点附近的青色悬浮方块 · 靠近按 E 读取</div>
+      <div id="log-list"></div>
+      <div id="log-text"></div>
+      <div class="repair-hint">[B] 关闭 · 已读取的日志可点击重读</div>
+    </div>
+  </div>
+
+  <!-- 设置 -->
+  <div id="storage-panel" class="fullpanel hidden">
+    <div class="storage-container panel">
+      <div class="repair-title" id="storage-title">储物箱 // STORAGE</div>
+      <div class="repair-sub">基地储物 · 背包区物品可一键存入 · 快捷栏不会被误存</div>
+      <div id="storage-body"></div>
+      <div class="storage-actions">
+        <button id="btn-storage-take-all" class="craft-btn">全部取出</button>
+        <button id="btn-storage-store-all" class="craft-btn">存入背包区全部</button>
+      </div>
+      <div class="repair-hint">[B] 关闭 · 储物箱随世界与存档保留</div>
+    </div>
+  </div>
+
+  <div id="settings-panel" class="fullpanel hidden">
+    <div class="settings-container panel">
+      <div class="repair-title">设置 // SETTINGS</div>
+      <div class="repair-sub">设置自动保存 · 立即生效</div>
+      <div class="settings-body">
+        <div class="set-row">
+          <label for="set-fov">视野 FOV</label>
+          <input type="range" id="set-fov" min="60" max="110" step="1" />
+          <span class="set-val" id="set-fov-val">75°</span>
+        </div>
+        <div class="set-row">
+          <label for="set-renderdist">渲染距离</label>
+          <input type="range" id="set-renderdist" min="3" max="10" step="1" />
+          <span class="set-val" id="set-renderdist-val">6 区块</span>
+        </div>
+        <div class="set-row">
+          <label for="set-graphics">画面质量</label>
+          <select id="set-graphics">
+            <option value="low">低（流畅）</option>
+            <option value="medium">中（均衡）</option>
+            <option value="high">高（精细）</option>
+          </select>
+        </div>
+        <div class="set-row">
+          <label for="set-sens">鼠标灵敏度</label>
+          <input type="range" id="set-sens" min="30" max="200" step="5" />
+          <span class="set-val" id="set-sens-val">100%</span>
+        </div>
+        <div class="set-row">
+          <label for="set-musicvol">音乐音量</label>
+          <input type="range" id="set-musicvol" min="0" max="100" step="5" />
+          <span class="set-val" id="set-musicvol-val">60%</span>
+        </div>
+        <div class="set-row">
+          <label for="set-sfxvol">音效音量</label>
+          <input type="range" id="set-sfxvol" min="0" max="100" step="5" />
+          <span class="set-val" id="set-sfxvol-val">80%</span>
+        </div>
+        <div class="set-row">
+          <label>游戏模式</label>
+          <button id="set-mode" class="craft-btn">切换到创造模式</button>
+          <span class="set-val" id="set-mode-val">生存</span>
+        </div>
+      </div>
+      <div class="repair-hint">[B] 返回 · [Esc] 也可 · 创造模式：自由飞行 / 无限资源 / 生命氧气无限 / 秒破方块</div>
+    </div>
+  </div>
+
+  <!-- 里程碑 -->
+  <div id="milestones-panel" class="fullpanel hidden">
+    <div class="milestones-container panel">
+      <div class="repair-title">里程碑 // MILESTONES</div>
+      <div class="repair-sub">游玩记录 · 已达成 <span id="milestones-count">0/16</span></div>
+      <div id="milestones-list"></div>
+      <div class="repair-hint">[B] 关闭 · 达成时游戏内即时提示</div>
+    </div>
+  </div>
+
+  <!-- 退出游戏 -->
+  <div id="exit-screen" class="screen hidden">
+    <div class="panel menu-panel">
+      <div class="menu-title">VOXEL<span>SPACE</span></div>
+      <div class="menu-sub">// 游戏已退出 · 感谢游玩 //</div>
+      <div class="menu-story">游戏进度已自动保存。<br/>关闭此标签页即可结束，或返回主菜单继续探索。</div>
+      <button id="btn-exit-back" class="btn primary">返回主菜单</button>
+    </div>
+  </div>
+
+  <!-- 星图 -->
+  <div id="starmap-panel" class="fullpanel hidden">
+    <div class="starmap-container panel">
+      <div class="repair-title">星图 // GALAXY MAP</div>
+      <div class="starmap-breadcrumb" id="starmap-breadcrumb">
+        <span id="starmap-crumb-stellar">恒星级</span>
+        <span class="crumb-sep" id="starmap-sep1">→</span>
+        <span id="starmap-crumb-system">太阳系</span>
+        <span class="crumb-sep hidden" id="starmap-sep2">→</span>
+        <span id="starmap-crumb-planet" class="hidden">行星系统</span>
+        <span class="crumb-sep hidden" id="starmap-sep3">→</span>
+        <span id="starmap-crumb-surface" class="hidden">地表导航</span>
+      </div>
+      <div class="starmap-topbar">
+        <button id="btn-starmap-back" class="craft-btn">← 上级星图</button>
+        <span id="starmap-level-label">太阳系 // 行星轨道图</span>
+      </div>
+      <div class="starmap-main">
+        <canvas id="starmap-canvas" width="720" height="430"></canvas>
+        <div id="starmap-info" class="starmap-detail">
+          <div class="si-title" id="starmap-info-title">选择天体查看详情</div>
+          <div class="si-facts" id="starmap-info-facts">点击星图上的节点，或从下方列表选择。</div>
+          <div class="si-actions" id="starmap-info-actions"></div>
+        </div>
+      </div>
+      <div class="repair-sub" id="starmap-list-title">星域目标列表</div>
+      <div id="starmap-list"></div>
+      <div class="repair-hint" id="starmap-hint">[B] 关闭 · [M] 也可 · 点击轨道图节点选择 · 设定目标后跟随罗盘脉冲</div>
+    </div>
+  </div>
+
+  <!-- 跃迁闪屏 -->
+  <div id="warp-flash" class="hidden"></div>
+
+  <!-- 开场镜头淡入遮罩（新游戏出生时的俯瞰镜头） -->
+  <div id="intro-fade"></div>
+
+  <!-- 旅程完成 -->
+  <div id="journey-panel" class="fullpanel hidden">
+    <div class="journey-container panel">
+      <div class="journey-title">旅程完成 // JOURNEY COMPLETE</div>
+      <div class="journey-sub">坠毁 → 采集 → 工具 → 庇护所 → 修复飞船 → 起飞 → 星际探索</div>
+      <div id="journey-stats"></div>
+      <button id="btn-journey" class="btn primary">继续探索宇宙</button>
+      <div class="repair-hint">故事才刚刚开始 · 还有更多星球等待发现</div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "/node_modules/three/build/three.module.js"
+  }
+}
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

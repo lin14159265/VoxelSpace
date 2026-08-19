@@ -1,0 +1,27 @@
+# 依赖
+node_modules/
+.npmcache/
+
+# 测试/验证截图产物（可随时重新生成）
+shots*/
+
+# 中间产物 / 备份（不入库，本地保留）
+backups/
+models/
+natural-selection.html
+natural-selection-preview.bundle.js
+src/entities/naturalSelection.js
+tools/*natural-selection*
+tools/build-natural-selection-preview.mjs
+*.zip
+
+# 系统与日志
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.tmp
+*.bak
+
